@@ -37,6 +37,9 @@ let gravidade = 0.4;
 
 let gameOver = false;
 let pintuacao = 0;
+let highestScore = 0;
+
+let gameStarted = false;
 
 window.onload = function() {
     canvas = document.getElementById("canvas");
@@ -58,60 +61,76 @@ window.onload = function() {
     bottomPipeImg = new Image();
     bottomPipeImg.src = "./Images/canoDeBaixo.png";
 
-    // Iniciar o loop de animação e a criação dos canos
-    requestAnimationFrame(update);
-    setInterval(placePipes, 1500); // 1,5 segundos
+    // Configurar eventos
+    document.getElementById("startButton").addEventListener("click", startGame);
     document.addEventListener("keydown", moveBird);
+    document.addEventListener("mousedown", moveBird);
 };
 
-function update() {
+function startGame() {
+    gameStarted = true;
+    document.getElementById("menu").style.display = "none"; // Esconde o menu
     requestAnimationFrame(update);
-    if(gameOver){
+    setInterval(placePipes, 1500); // 1,5 segundos
+    loadHighestScore(); // Carrega a pontuação mais alta quando o jogo começa
+}
+
+function update() {
+    if (!gameStarted) {
+        return; // Não atualiza o jogo se não estiver iniciado
+    }
+    
+    requestAnimationFrame(update);
+    
+    if(gameOver) {
+        updateHighestScore(); // Atualiza a pontuação mais alta ao final do jogo
+        saveHighestScore(); // Salva a pontuação mais alta
         return;
     }
+    
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    //passarinho
+    // Passarinho
     velocityY += gravidade;
-    bird.y = Math.max(bird.y + velocityY, 0); //bird.y += velocityY;
+    bird.y = Math.max(bird.y + velocityY, 0);
     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
-    if(bird.y > canvas.height){
+    if(bird.y > canvas.height) {
         gameOver = true;
     }
 
-    // canos
+    // Canos
     for (let i = 0; i < pipeArray.length; i++) {
         let pipe = pipeArray[i];
         pipe.x += velocityX;
         context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
         
-        if(!pipe.passed && bird.x > pipe.x + pipe.width){
-            pintuacao += 1 /2;
+        if(!pipe.passed && bird.x > pipe.x + pipe.width) {
+            pintuacao += 1 / 2;
             pipe.passed = true;
-
         }
 
-        if(detectarColizao(bird, pipe)){
+        if(detectarColizao(bird, pipe)) {
             gameOver = true;
         }
     }
 
-    //limpar os canos
-    while(pipeArray.length > 0 && pipeArray[0].x < -pipeWidth){
+    // Limpar os canos
+    while(pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
         pipeArray.shift();
     }
     
-    //pontuação
+    // Pontuação
     context.fillStyle = "white";
     context.font = "45px sans-serif";
     context.fillText(pintuacao, 5, 45);
+    context.fillText("" + highestScore, 5, 630);
 
-    if(gameOver){
-        context.fillText("GAME OVER", 5, 90)
+    if(gameOver) {
+        context.fillText("GAME OVER", 5, 90);
     }
-    
 }
+
 
 function placePipes() {
 
@@ -147,9 +166,10 @@ function placePipes() {
 }
 
 function moveBird(e){
-    if(e.code == "Space" || e.code == "ArrowUp" || e.code == "KeyW"){
+    if(e.code == "Space" || e.code == "ArrowUp" || e.code == "KeyW" || e.code == "mouse0"){
         //pula
         velocityY = -6;
+        
 
         //reiniciar o jogo
         if(gameOver){
@@ -157,6 +177,18 @@ function moveBird(e){
             pipeArray = [];
             pintuacao = 0;
             gameOver= false
+        }
+    } else if (e.type === "mousedown" && e.button === 0) {
+        // pular
+        velocityY = -6;
+        //console.log("Mouse clicado");
+
+        // reiniciar o jogo
+        if (gameOver) {
+            bird.y = birdY;
+            pipeArray = [];
+            pintuacao = 0;
+            gameOver = false;
         }
     }
 }
@@ -166,4 +198,20 @@ function detectarColizao(a, b){
             a.x + a.width > b.x &&
             a.y < b.y + b.height &&
             a.y + a.height > b.y;
+}
+
+function updateHighestScore(){
+    if(pintuacao > highestScore)
+        highestScore = pintuacao;
+}
+
+function saveHighestScore(){
+    localStorage.setItem("highestScore", highestScore);
+}
+
+function carregarHighestScore(){
+    const savedScore = localStorage.getItem("highestScore");
+    if(savedScore !== null){
+        highestScore = parseFloat(savedScore);
+    }
 }
